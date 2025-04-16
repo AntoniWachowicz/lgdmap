@@ -1,0 +1,77 @@
+/* src/app.css */
+:root {
+    --primary-color: #3388ff;
+    --primary-hover: #2970d6;
+    --background-color: #f8f9fa;
+    --text-color: #333;
+    --light-border: #ddd;
+    --light-text: #666;
+    --sidebar-width: 320px;
+    --header-height: 60px;
+    --danger-color: #dc3545;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  html, body {
+    height: 100%;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--text-color);
+    background-color: var(--background-color);
+  }
+  
+  button {
+    cursor: pointer;
+  }
+  
+  a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Leaflet specific styles */
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+  }
+  
+  .leaflet-control-attribution {
+    font-size: 9px !important;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    padding: 2px 5px !important;
+    border-radius: 3px !important;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    border-radius: 4px;
+    padding: 0;
+  }
+  
+  .leaflet-popup-content {
+    margin: 0;
+    padding: 10px;
+  }
+
+  .pin-item {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border-radius: 4px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+  }
