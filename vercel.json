@@ -1,21 +1,22 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "package.json",
-        "use": "@vercel/static-build",
-        "config": {
-          "zeroConfig": true
-        }
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "zeroConfig": true,
+        "installCommand": "npm install --legacy-peer-deps"
       }
-    ],
-    "routes": [
-      {
-        "handle": "filesystem"
-      },
-      {
-        "src": "/.*",
-        "dest": "/"
-      }
-    ]
-  }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/"
+    }
+  ]
+}
