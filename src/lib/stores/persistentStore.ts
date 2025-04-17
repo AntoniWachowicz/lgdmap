@@ -35,7 +35,7 @@ export function persistentWritable<T>(
       const item = localStorage.getItem(key);
       storedValue = item ? deserialize(item) : initialValue;
     } catch (error) {
-      console.warn(`Error reading from localStorage`, error);
+      console.warn(`Error reading from localStorage for key "${key}"`, error);
       storedValue = initialValue;
     }
   } else {
@@ -51,7 +51,7 @@ export function persistentWritable<T>(
       try {
         localStorage.setItem(key, serialize(value));
       } catch (error) {
-        console.warn(`Error writing to localStorage`, error);
+        console.warn(`Error writing to localStorage for key "${key}"`, error);
       }
     });
   }

@@ -8,100 +8,27 @@
     selectedPinId, 
     filterTags, 
     isAdminMode,
+    filteredPins,
+    selectedPin,
+    isLoadingPins,
+    isLoadingTags,
+    isLoadingBoundary,
+    isLoadingSettings,
+    pinsError,
+    tagsError,
+    boundaryError,
+    settingsError,
+    loadAllData,
     addPin,
     updatePin,
     deletePin,
     setRegionBoundary
   } from '$lib/stores/mapStore';
-  import type { Pin } from '$lib/stores/mapStore';
-  
-  // Sample data for testing
-  const samplePins = [
-    {
-      position: [52.2297, 21.0122] as [number, number], // Warsaw
-      title: 'Community Center Renovation',
-      mainTag: 'culture',
-      supportingTags: ['education', 'community'],
-      content: [
-        { 
-          type: 'text' as const, 
-          value: 'This project renovated the local community center to provide better facilities for cultural events.',
-          title: 'Description'
-        },
-        {
-          type: 'image' as const,
-          value: 'https://via.placeholder.com/400x300',
-          title: 'Community Center'
-        }
-      ]
-    },
-    {
-      position: [50.0647, 19.9450] as [number, number], // Krakow
-      title: 'Public Park Improvements',
-      mainTag: 'environment',
-      supportingTags: ['recreation', 'health'],
-      content: [
-        {
-          type: 'text' as const,
-          value: 'Adding new recreational facilities and green spaces to the central public park.',
-          title: 'Description'
-        },
-        {
-          type: 'video' as const,
-          value: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-          title: 'Park Tour'
-        }
-      ]
-    },
-    {
-      position: [51.1079, 17.0385] as [number, number], // Wroclaw
-      title: 'Healthcare Clinic Expansion',
-      mainTag: 'health',
-      supportingTags: ['infrastructure'],
-      content: [
-        {
-          type: 'text' as const,
-          value: 'Expansion of the local healthcare clinic to serve more patients and provide additional medical services.',
-          title: 'Description'
-        },
-        {
-          type: 'pdf' as const,
-          value: 'https://example.com/sample.pdf',
-          title: 'Project Documentation'
-        }
-      ]
-    }
-  ];
-  
-  // Sample region boundary for testing (rough outline of Poland)
-  const sampleBoundary = {
-    coordinates: [
-      [54.8, 14.2], // Northwest
-      [54.8, 23.0], // Northeast
-      [49.0, 23.0], // Southeast
-      [49.0, 14.2], // Southwest
-      [54.8, 14.2]  // Close the polygon
-    ] as [number, number][],
-    minZoom: 5,
-    maxZoom: 18,
-    name: 'Poland'
-  };
   
   // State variables
   let showSidebar = true;
   let mapComponent: any;
-  
-  // Derived values
-  $: selectedPin = $selectedPinId 
-    ? $pins.find(pin => pin.id === $selectedPinId)
-    : null;
-  
-  $: filteredPins = $filterTags.length > 0 
-    ? $pins.filter(pin => 
-        $filterTags.includes(pin.mainTag) || 
-        pin.supportingTags.some(tag => $filterTags.includes(tag))
-      )
-    : $pins;
+  let isDataLoading = true;
   
   // Toggle to admin mode
   function toggleAdminMode() {
@@ -132,13 +59,20 @@
     viewMode.update(current => current === 'map' ? 'list' : 'map');
   }
   
-  // Initialize with sample data if empty
-  onMount(() => {
-    if ($pins.length === 0) {
-      samplePins.forEach(pin => {
-        addPin(pin);
-      });
-    }
+  // Detect if any data is loading
+  $: isDataLoading = $isLoadingPins || $isLoadingTags || $isLoadingBoundary || $isLoadingSettings;
+  
+  // Detect if any errors occurred
+  $: dataErrors = [
+    $pinsError, 
+    $tagsError, 
+    $boundaryError, 
+    $settingsError
+  ].filter(Boolean);
+  
+  // Initialize data on mount
+  onMount(async () => {
+    await loadAllData();
   });
 </script>
 
@@ -147,6 +81,9 @@
   <header class="app-header">
     <h1>LGD Map</h1>
     <div class="header-controls">
+      {#if isDataLoading}
+        <span class="loading-indicator">Loading data...</span>
+      {/if}
       <button on:click={toggleAdminMode} class="admin-toggle">
         {$isAdminMode ? 'Exit Admin Mode' : 'Admin Mode'}
       </button>
@@ -155,6 +92,18 @@
       </button>
     </div>
   </header>
+
+  {#if dataErrors.length > 0}
+    <div class="error-banner">
+      <strong>Error loading data:</strong>
+      <ul>
+        {#each dataErrors as error}
+          <li>{error}</li>
+        {/each}
+      </ul>
+      <button type="button" on:click={loadAllData}>Retry</button>
+    </div>
+  {/if}
 
   <div class="app-content">
     <!-- Filter Sidebar -->
@@ -173,29 +122,33 @@
       
       <div class="filter-section">
         <h3>Tags</h3>
-        <div class="tag-filters" role="group" aria-label="Filter by tags">
-          {#each $tags as tag}
-            <button 
-              type="button"
-              class="tag-button" 
-              style="--tag-color: {tag.color}"
-              class:active={$filterTags.includes(tag.name)}
-              on:click={() => toggleTagFilter(tag.name)}
-              aria-pressed={$filterTags.includes(tag.name)}
-            >
-              {tag.name}
-            </button>
-          {/each}
-        </div>
+        {#if $isLoadingTags}
+          <p>Loading tags...</p>
+        {:else}
+          <div class="tag-filters" role="group" aria-label="Filter by tags">
+            {#each $tags as tag}
+              <button 
+                type="button"
+                class="tag-button" 
+                style="--tag-color: {tag.color}"
+                class:active={$filterTags.includes(tag.name)}
+                on:click={() => toggleTagFilter(tag.name)}
+                aria-pressed={$filterTags.includes(tag.name)}
+              >
+                {tag.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
       
       {#if $isAdminMode}
         <div class="admin-section">
           <h3>Admin Controls</h3>
-          <button class="admin-button">Add New Pin</button>
-          <button class="admin-button">Manage Tags</button>
-          <button class="admin-button">Edit Region Boundary</button>
-          <button class="admin-button">Configure Pin Fields</button>
+          <button class="admin-button" type="button">Add New Pin</button>
+          <button class="admin-button" type="button">Manage Tags</button>
+          <button class="admin-button" type="button">Edit Region Boundary</button>
+          <button class="admin-button" type="button">Configure Pin Fields</button>
         </div>
       {/if}
     </aside>
@@ -205,70 +158,88 @@
       {#if $viewMode === 'map'}
         <Map 
           bind:this={mapComponent}
-          pins={filteredPins} 
+          pins={$filteredPins} 
           height="calc(100vh - 60px)"
         />
       {:else}
         <div class="list-view">
           <h2>Investment Projects</h2>
-          <div class="pins-list" role="listbox" aria-label="List of investment projects">
-            {#each filteredPins as pin}
-              <div 
-                class="pin-item" 
-                class:active={$selectedPinId === pin.id}
-                on:click={() => selectPin(pin.id)}
-                on:keydown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectPin(pin.id);
-                  }
-                }}
-                role="option"
-                aria-selected={$selectedPinId === pin.id}
-                tabindex="0"
-              >
-                <h3>{pin.title}</h3>
-                <div class="pin-tags">
-                  <span 
-                    class="main-tag" 
-                    style="--tag-color: {$tags.find(t => t.name === pin.mainTag)?.color || '#ccc'}"
-                  >
-                    {pin.mainTag}
-                  </span>
-                  {#each pin.supportingTags as tagName}
+          
+          {#if $isLoadingPins}
+            <div class="loading-container">
+              <p>Loading projects...</p>
+            </div>
+          {:else if $filteredPins.length === 0}
+            <div class="empty-state">
+              <p>No projects found. {$filterTags.length > 0 ? 'Try changing your filters.' : ''}</p>
+            </div>
+          {:else}
+            <div class="pins-list" role="listbox" aria-label="List of investment projects">
+              {#each $filteredPins as pin}
+                <div 
+                  class="pin-item" 
+                  class:active={$selectedPinId === pin.id}
+                  on:click={() => selectPin(pin.id)}
+                  on:keydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      selectPin(pin.id);
+                    }
+                  }}
+                  role="option"
+                  aria-selected={$selectedPinId === pin.id}
+                  tabindex="0"
+                >
+                  <h3>{pin.title}</h3>
+                  <div class="pin-tags">
                     <span 
-                      class="supporting-tag"
-                      style="--tag-color: {$tags.find(t => t.name === tagName)?.color || '#ccc'}"
+                      class="main-tag" 
+                      style="--tag-color: {$tags.find(t => t.name === pin.mainTag)?.color || '#ccc'}"
                     >
-                      {tagName}
+                      {pin.mainTag}
                     </span>
-                  {/each}
+                    {#each pin.supportingTags as tagName}
+                      <span 
+                        class="supporting-tag"
+                        style="--tag-color: {$tags.find(t => t.name === tagName)?.color || '#ccc'}"
+                      >
+                        {tagName}
+                      </span>
+                    {/each}
+                  </div>
+                  <p>{pin.content.find(c => c.type === 'text')?.value || 'No description available.'}</p>
                 </div>
-                <p>{pin.content.find(c => c.type === 'text')?.value || 'No description available.'}</p>
-              </div>
-            {/each}
-          </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/if}
     </main>
 
     <!-- Detail Sidebar (shown when a pin is selected) -->
-    {#if selectedPin}
+    {#if $selectedPin}
       <aside class="sidebar detail-sidebar">
         <div class="sidebar-header">
-          <h2>{selectedPin.title}</h2>
-          <button on:click={() => selectedPinId.set(null)} class="close-button">×</button>
+          <h2>{$selectedPin.title}</h2>
+          <button 
+            type="button" 
+            on:click={() => selectedPinId.set(null)} 
+            class="close-button"
+            aria-label="Close details"
+          >
+            ×
+          </button>
         </div>
         
         <div class="pin-details">
           <div class="pin-tags">
             <span 
               class="main-tag"
-              style="--tag-color: {$tags.find(t => t.name === selectedPin.mainTag)?.color || '#ccc'}"
+              style="--tag-color: {$tags.find(t => t.name === $selectedPin.mainTag)?.color || '#ccc'}"
             >
-              {selectedPin.mainTag}
+              {$selectedPin.mainTag}
             </span>
-            {#each selectedPin.supportingTags as tagName}
+            {#each $selectedPin.supportingTags as tagName}
               <span 
                 class="supporting-tag"
                 style="--tag-color: {$tags.find(t => t.name === tagName)?.color || '#ccc'}"
@@ -278,7 +249,7 @@
             {/each}
           </div>
           
-          {#each selectedPin.content as item}
+          {#each $selectedPin.content as item}
             <div class="content-item">
               {#if item.title}
                 <h3>{item.title}</h3>
@@ -287,7 +258,7 @@
               {#if item.type === 'text'}
                 <p>{item.value}</p>
               {:else if item.type === 'image'}
-                <img src={item.value} alt={item.title || selectedPin.title} />
+                <img src={item.value} alt={item.title || $selectedPin.title} />
               {:else if item.type === 'video'}
                 <div class="video-container">
                   <iframe 
@@ -310,8 +281,8 @@
           
           {#if $isAdminMode}
             <div class="admin-controls">
-              <button class="edit-button">Edit Pin</button>
-              <button class="delete-button">Delete Pin</button>
+              <button type="button" class="edit-button">Edit Pin</button>
+              <button type="button" class="delete-button">Delete Pin</button>
             </div>
           {/if}
         </div>
@@ -348,6 +319,7 @@
   .header-controls {
     display: flex;
     gap: 10px;
+    align-items: center;
   }
   
   .app-content {
@@ -626,5 +598,42 @@
   .delete-button:hover {
     background-color: #dc3545;
     color: white;
+  }
+  
+  .loading-indicator {
+    color: white;
+    font-size: 14px;
+  }
+  
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    color: #666;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px 0;
+    color: #666;
+  }
+  
+  .error-banner {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+  
+  .error-banner button {
+    background-color: #721c24;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin-top: 10px;
+    cursor: pointer;
   }
 </style>
