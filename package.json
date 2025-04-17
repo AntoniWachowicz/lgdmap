@@ -32,5 +32,11 @@
 	  "@sveltejs/vite-plugin-svelte": {
 		"vite": "^5.0.3"
 	  }
-	}
+	},
+	"optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "latest",
+    "@rollup/rollup-darwin-arm64": "latest",
+    "@rollup/rollup-darwin-x64": "latest",
+    "@rollup/rollup-win32-x64-msvc": "latest"
+  	}
   }
